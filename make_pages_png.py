@@ -38,7 +38,7 @@ MAX_DETAIL_ARTICLES = 6
 MAX_LINES_PER_HEADLINE = 2
 MAX_LINES_DETAIL_TITLE = 3
 
-OUTPUT_PAGE1 = "page1.png"
+OUTPUT_INDEX = "index.png"
 
 JST = timezone(timedelta(hours=9))
 
@@ -237,7 +237,7 @@ def render_headlines_page(feed, fonts, output_path):
         draw,
         fonts,
         getattr(feed.feed, "title", "NHKニュース"),
-        "1/7"
+        "index"
     )
 
     max_width = WIDTH - LEFT_MARGIN - RIGHT_MARGIN
@@ -252,7 +252,7 @@ def render_headlines_page(feed, fonts, output_path):
             font=fonts["body"],
             fill=0
         )
-        draw_footer(draw, fonts, "", "一覧 1/7", "詳細 →")
+        draw_footer(draw, fonts, "", "index", "詳細 →")
         image.save(output_path)
         print(f"saved: {output_path}")
         return
@@ -296,7 +296,7 @@ def render_headlines_page(feed, fonts, output_path):
             if y < bottom_limit:
                 draw_separator(draw, y - 8)
 
-    draw_footer(draw, fonts, "", "一覧 1/7", "詳細 →")
+    draw_footer(draw, fonts, "", "index", "詳細 →")
     image.save(output_path)
     print(f"saved: {output_path}")
 
@@ -409,11 +409,11 @@ def main():
     feed = feedparser.parse(RSS_URL)
     fonts = load_fonts()
 
-    render_headlines_page(feed, fonts, OUTPUT_PAGE1)
+    render_headlines_page(feed, fonts, OUTPUT_INDEX)
 
     for i in range(MAX_DETAIL_ARTICLES):
-        output_path = f"page{i + 2}.png"
-        page_label = f"{i + 2}/7"
+        output_path = f"page{i + 1}.png"
+        page_label = f"page{i + 1}"
         render_detail_page(feed, fonts, i, output_path, page_label)
 
 
