@@ -34,14 +34,11 @@ FOOTER_HEIGHT = 56
 FOOTER_TOP_GAP = 10
 
 MAX_HEADLINES = 6
-MAX_DETAIL_ARTICLES = 3
+MAX_DETAIL_ARTICLES = 6
 MAX_LINES_PER_HEADLINE = 2
 MAX_LINES_DETAIL_TITLE = 3
 
 OUTPUT_PAGE1 = "page1.png"
-OUTPUT_PAGE2 = "page2.png"
-OUTPUT_PAGE3 = "page3.png"
-OUTPUT_PAGE4 = "page4.png"
 
 JST = timezone(timedelta(hours=9))
 
@@ -212,13 +209,21 @@ def draw_footer(draw, fonts, left_text, center_text, right_text):
 
     if center_text:
         center_width = draw.textlength(center_text, font=fonts["footer"])
-        draw.text(((WIDTH - center_width) / 2, y),
-                  center_text, font=fonts["footer"], fill=110)
+        draw.text(
+            ((WIDTH - center_width) / 2, y),
+            center_text,
+            font=fonts["footer"],
+            fill=110
+        )
 
     if right_text:
         right_width = draw.textlength(right_text, font=fonts["footer"])
-        draw.text((WIDTH - RIGHT_MARGIN - right_width, y),
-                  right_text, font=fonts["footer"], fill=110)
+        draw.text(
+            (WIDTH - RIGHT_MARGIN - right_width, y),
+            right_text,
+            font=fonts["footer"],
+            fill=110
+        )
 
 
 def content_bottom_limit():
@@ -228,9 +233,12 @@ def content_bottom_limit():
 def render_headlines_page(feed, fonts, output_path):
     image, draw = make_canvas()
 
-    y = draw_header(draw, fonts,
-                    getattr(feed.feed, "title", "NHKニュース"),
-                    "1/4")
+    y = draw_header(
+        draw,
+        fonts,
+        getattr(feed.feed, "title", "NHKニュース"),
+        "1/7"
+    )
 
     max_width = WIDTH - LEFT_MARGIN - RIGHT_MARGIN
     bottom_limit = content_bottom_limit()
@@ -238,23 +246,21 @@ def render_headlines_page(feed, fonts, output_path):
     entries = feed.entries[:MAX_HEADLINES]
 
     if not entries:
-        draw.text((LEFT_MARGIN, y),
-                  "記事がありません。",
-                  font=fonts["body"], fill=0)
-        draw_footer(draw, fonts, "", "一覧 1/4", "詳細 →")
+        draw.text(
+            (LEFT_MARGIN, y),
+            "記事がありません。",
+            font=fonts["body"],
+            fill=0
+        )
+        draw_footer(draw, fonts, "", "一覧 1/7", "詳細 →")
         image.save(output_path)
+        print(f"saved: {output_path}")
         return
 
     for i, entry in enumerate(entries):
-
         title_text = "・" + entry.title
-        title_lines = wrap_text(draw,
-                                title_text,
-                                fonts["body"],
-                                max_width)
-
-        title_lines = limit_lines(title_lines,
-                                  MAX_LINES_PER_HEADLINE)
+        title_lines = wrap_text(draw, title_text, fonts["body"], max_width)
+        title_lines = limit_lines(title_lines, MAX_LINES_PER_HEADLINE)
 
         estimated_height = (
             len(title_lines) * LINE_HEIGHT
@@ -265,163 +271,150 @@ def render_headlines_page(feed, fonts, output_path):
         if y + estimated_height > bottom_limit:
             break
 
-        y = draw_lines(draw,
-                       title_lines,
-                       fonts["body"],
-                       LEFT_MARGIN,
-                       y,
-                       LINE_HEIGHT)
+        y = draw_lines(
+            draw,
+            title_lines,
+            fonts["body"],
+            LEFT_MARGIN,
+            y,
+            LINE_HEIGHT
+        )
 
         meta_text = get_entry_datetime(entry)
 
-        draw.text((LEFT_MARGIN + 18, y - 2),
-                  meta_text,
-                  font=fonts["meta"],
-                  fill=90)
+        draw.text(
+            (LEFT_MARGIN + 18, y - 2),
+            meta_text,
+            font=fonts["meta"],
+            fill=90
+        )
 
         y += META_LINE_HEIGHT
         y += ITEM_GAP
 
-        # 最終行以外のみ区切り線を描画
         if i < len(entries) - 1:
             if y < bottom_limit:
                 draw_separator(draw, y - 8)
 
-    draw_footer(draw, fonts, "", "一覧 1/4", "詳細 →")
+    draw_footer(draw, fonts, "", "一覧 1/7", "詳細 →")
     image.save(output_path)
+    print(f"saved: {output_path}")
 
 
 def render_detail_page(feed, fonts, entry_index, output_path, page_label):
     image, draw = make_canvas()
 
     feed_title = getattr(feed.feed, "title", "NHKニュース")
-
     y = draw_header(draw, fonts, feed_title, page_label)
 
     bottom_limit = content_bottom_limit()
 
     if len(feed.entries) <= entry_index:
-        draw.text((LEFT_MARGIN, y),
-                  "対象記事がありません。",
-                  font=fonts["body"], fill=0)
+        draw.text(
+            (LEFT_MARGIN, y),
+            "対象記事がありません。",
+            font=fonts["body"],
+            fill=0
+        )
 
-        draw_footer(draw,
-                    fonts,
-                    "← 前の記事",
-                    page_label,
-                    "次の記事 →")
+        draw_footer(
+            draw,
+            fonts,
+            "← 前の記事",
+            page_label,
+            "次の記事 →"
+        )
 
         image.save(output_path)
+        print(f"saved: {output_path}")
         return
 
     entry = feed.entries[entry_index]
-
     max_width = WIDTH - LEFT_MARGIN - RIGHT_MARGIN
 
     rank_label = f"記事 {entry_index + 1}"
-
-    draw.text((LEFT_MARGIN, y),
-              rank_label,
-              font=fonts["section"],
-              fill=0)
+    draw.text(
+        (LEFT_MARGIN, y),
+        rank_label,
+        font=fonts["section"],
+        fill=0
+    )
 
     y += 42
 
-    title_lines = wrap_text(draw,
-                            entry.title,
-                            fonts["detail_title"],
-                            max_width)
+    title_lines = wrap_text(draw, entry.title, fonts["detail_title"], max_width)
+    title_lines = limit_lines(title_lines, MAX_LINES_DETAIL_TITLE)
 
-    title_lines = limit_lines(title_lines,
-                              MAX_LINES_DETAIL_TITLE)
-
-    y = draw_lines(draw,
-                   title_lines,
-                   fonts["detail_title"],
-                   LEFT_MARGIN,
-                   y,
-                   44)
+    y = draw_lines(
+        draw,
+        title_lines,
+        fonts["detail_title"],
+        LEFT_MARGIN,
+        y,
+        44
+    )
 
     y += 4
 
     meta_text = get_entry_datetime(entry)
-
-    draw.text((LEFT_MARGIN, y),
-              meta_text,
-              font=fonts["meta"],
-              fill=90)
+    draw.text(
+        (LEFT_MARGIN, y),
+        meta_text,
+        font=fonts["meta"],
+        fill=90
+    )
 
     y += 34
-
     draw_separator(draw, y)
-
     y += SECTION_GAP
 
-    draw.text((LEFT_MARGIN, y),
-              "要約",
-              font=fonts["section"],
-              fill=0)
+    draw.text(
+        (LEFT_MARGIN, y),
+        "要約",
+        font=fonts["section"],
+        fill=0
+    )
 
     y += 38
 
     summary = get_entry_summary(entry)
-
-    summary_lines = wrap_text(draw,
-                              summary,
-                              fonts["body"],
-                              max_width)
+    summary_lines = wrap_text(draw, summary, fonts["body"], max_width)
 
     available_height = bottom_limit - y
+    max_summary_lines = max(1, available_height // LINE_HEIGHT)
+    summary_lines = limit_lines(summary_lines, max_summary_lines)
 
-    max_summary_lines = max(1,
-                            available_height // LINE_HEIGHT)
+    y = draw_lines(
+        draw,
+        summary_lines,
+        fonts["body"],
+        LEFT_MARGIN,
+        y,
+        LINE_HEIGHT
+    )
 
-    summary_lines = limit_lines(summary_lines,
-                                max_summary_lines)
-
-    y = draw_lines(draw,
-                   summary_lines,
-                   fonts["body"],
-                   LEFT_MARGIN,
-                   y,
-                   LINE_HEIGHT)
-
-    draw_footer(draw,
-                fonts,
-                "← 前の記事",
-                page_label,
-                "次の記事 →")
+    draw_footer(
+        draw,
+        fonts,
+        "← 前の記事",
+        page_label,
+        "次の記事 →"
+    )
 
     image.save(output_path)
+    print(f"saved: {output_path}")
 
 
 def main():
-
     feed = feedparser.parse(RSS_URL)
-
     fonts = load_fonts()
 
-    render_headlines_page(feed,
-                          fonts,
-                          OUTPUT_PAGE1)
+    render_headlines_page(feed, fonts, OUTPUT_PAGE1)
 
-    render_detail_page(feed,
-                       fonts,
-                       0,
-                       OUTPUT_PAGE2,
-                       "2/4")
-
-    render_detail_page(feed,
-                       fonts,
-                       1,
-                       OUTPUT_PAGE3,
-                       "3/4")
-
-    render_detail_page(feed,
-                       fonts,
-                       2,
-                       OUTPUT_PAGE4,
-                       "4/4")
+    for i in range(MAX_DETAIL_ARTICLES):
+        output_path = f"page{i + 2}.png"
+        page_label = f"{i + 2}/7"
+        render_detail_page(feed, fonts, i, output_path, page_label)
 
 
 if __name__ == "__main__":
