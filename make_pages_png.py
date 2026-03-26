@@ -16,7 +16,7 @@ HEIGHT = 960
 TITLE_FONT_SIZE = 42
 SECTION_FONT_SIZE = 24
 BODY_FONT_SIZE = 28
-META_FONT_SIZE = 20
+META_FONT_SIZE = 18
 DETAIL_TITLE_FONT_SIZE = 34
 FOOTER_FONT_SIZE = 20
 
@@ -25,15 +25,15 @@ RIGHT_MARGIN = 32
 TOP_MARGIN = 28
 BOTTOM_MARGIN = 20
 
-LINE_HEIGHT = 40
-META_LINE_HEIGHT = 28
-ITEM_GAP = 18
+LINE_HEIGHT = 36
+META_LINE_HEIGHT = 24
+ITEM_GAP = 12
 SECTION_GAP = 20
 
 FOOTER_HEIGHT = 56
 FOOTER_TOP_GAP = 10
 
-MAX_HEADLINES = 5
+MAX_HEADLINES = 6
 MAX_DETAIL_ARTICLES = 3
 MAX_LINES_PER_HEADLINE = 2
 MAX_LINES_DETAIL_TITLE = 3
@@ -114,8 +114,6 @@ def draw_separator(draw, y):
 def parse_entry_datetime_to_jst(entry):
     """
     RSS の元日時文字列を優先して JST に変換する。
-    feedparser の *_parsed をそのまま naive datetime 化すると
-    UTC のまま表示してしまうことがあるため使わない。
     """
     raw = None
 
@@ -134,7 +132,6 @@ def parse_entry_datetime_to_jst(entry):
         except Exception:
             pass
 
-    # フォールバック
     t = None
     if getattr(entry, "published_parsed", None):
         t = entry.published_parsed
@@ -142,7 +139,6 @@ def parse_entry_datetime_to_jst(entry):
         t = entry.updated_parsed
 
     if t is not None:
-        # parsed は UTC 扱いで JST に変換
         dt = datetime(*t[:6], tzinfo=timezone.utc).astimezone(JST)
         return dt
 
