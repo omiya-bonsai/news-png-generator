@@ -233,24 +233,29 @@ def content_bottom_limit():
 
 
 def get_index_footer_labels(total_entries: int):
-    if total_entries <= 0:
+    total_pages = min(total_entries, MAX_DETAIL_ARTICLES)
+
+    if total_pages <= 0:
         return "", "index", ""
 
-    last_page_num = min(total_entries, MAX_DETAIL_ARTICLES)
-    left_text = f"← page{last_page_num}"
+    left_text = f"← page{total_pages}"
     right_text = "page1 →"
     return left_text, "index", right_text
 
 
-def get_detail_footer_labels(entry_index: int, total_entries: int):
-    if total_entries <= 0:
+def get_detail_footer_labels(page_num: int, total_pages: int):
+    if total_pages <= 0:
         return "", "", ""
 
-    is_first = entry_index == 0
-    is_last = entry_index >= total_entries - 1
+    if page_num <= 1:
+        left_text = "← index"
+    else:
+        left_text = f"← page{page_num - 1}"
 
-    left_text = "← index" if is_first else "← 前の記事"
-    right_text = "index →" if is_last else "次の記事 →"
+    if page_num >= total_pages:
+        right_text = "index →"
+    else:
+        right_text = f"page{page_num + 1} →"
 
     return left_text, right_text
 
@@ -333,7 +338,8 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
     y = draw_header(draw, fonts, feed_title, page_label)
     bottom_limit = content_bottom_limit()
 
-    total_entries = min(len(feed.entries), MAX_DETAIL_ARTICLES)
+    total_pages = min(len(feed.entries), MAX_DETAIL_ARTICLES)
+    page_num = entry_index + 1
 
     if len(feed.entries) <= entry_index:
         draw.text(
@@ -342,7 +348,7 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
             font=fonts["body"],
             fill=0
         )
-        left_text, right_text = get_detail_footer_labels(entry_index, total_entries)
+        left_text, right_text = get_detail_footer_labels(page_num, total_pages)
         draw_footer(draw, fonts, left_text, page_label, right_text)
         image.save(output_path)
         print(f"saved: {output_path}")
@@ -351,7 +357,7 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
     entry = feed.entries[entry_index]
     max_width = WIDTH - LEFT_MARGIN - RIGHT_MARGIN
 
-    rank_label = f"記事 {entry_index + 1}"
+    rank_label = f"記事 {page_num}"
     draw.text(
         (LEFT_MARGIN, y),
         rank_label,
@@ -412,7 +418,7 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
         LINE_HEIGHT
     )
 
-    left_text, right_text = get_detail_footer_labels(entry_index, total_entries)
+    left_text, right_text = get_detail_footer_labels(page_num, total_pages)
     draw_footer(draw, fonts, left_text, page_label, right_text)
     image.save(output_path)
     print(f"saved: {output_path}")
