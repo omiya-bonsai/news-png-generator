@@ -232,7 +232,20 @@ def content_bottom_limit():
     return HEIGHT - BOTTOM_MARGIN - FOOTER_HEIGHT - FOOTER_TOP_GAP
 
 
+def get_index_footer_labels(total_entries: int):
+    if total_entries <= 0:
+        return "", "index", ""
+
+    last_page_num = min(total_entries, MAX_DETAIL_ARTICLES)
+    left_text = f"← page{last_page_num}"
+    right_text = "page1 →"
+    return left_text, "index", right_text
+
+
 def get_detail_footer_labels(entry_index: int, total_entries: int):
+    if total_entries <= 0:
+        return "", "", ""
+
     is_first = entry_index == 0
     is_last = entry_index >= total_entries - 1
 
@@ -264,7 +277,8 @@ def render_headlines_page(feed, fonts, output_path):
             font=fonts["body"],
             fill=0
         )
-        draw_footer(draw, fonts, "", "index", "詳細 →")
+        left_text, center_text, right_text = get_index_footer_labels(0)
+        draw_footer(draw, fonts, left_text, center_text, right_text)
         image.save(output_path)
         print(f"saved: {output_path}")
         return
@@ -306,7 +320,8 @@ def render_headlines_page(feed, fonts, output_path):
         if i < len(entries) - 1 and y < bottom_limit:
             draw_separator(draw, y - 8)
 
-    draw_footer(draw, fonts, "", "index", "詳細 →")
+    left_text, center_text, right_text = get_index_footer_labels(len(feed.entries))
+    draw_footer(draw, fonts, left_text, center_text, right_text)
     image.save(output_path)
     print(f"saved: {output_path}")
 
@@ -318,6 +333,8 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
     y = draw_header(draw, fonts, feed_title, page_label)
     bottom_limit = content_bottom_limit()
 
+    total_entries = min(len(feed.entries), MAX_DETAIL_ARTICLES)
+
     if len(feed.entries) <= entry_index:
         draw.text(
             (LEFT_MARGIN, y),
@@ -325,10 +342,7 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
             font=fonts["body"],
             fill=0
         )
-        left_text, right_text = get_detail_footer_labels(
-            entry_index,
-            min(len(feed.entries), MAX_DETAIL_ARTICLES)
-        )
+        left_text, right_text = get_detail_footer_labels(entry_index, total_entries)
         draw_footer(draw, fonts, left_text, page_label, right_text)
         image.save(output_path)
         print(f"saved: {output_path}")
@@ -398,7 +412,6 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
         LINE_HEIGHT
     )
 
-    total_entries = min(len(feed.entries), MAX_DETAIL_ARTICLES)
     left_text, right_text = get_detail_footer_labels(entry_index, total_entries)
     draw_footer(draw, fonts, left_text, page_label, right_text)
     image.save(output_path)
