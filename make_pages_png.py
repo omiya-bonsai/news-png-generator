@@ -391,20 +391,27 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
 
 def build_index_version(feed) -> str:
     """
-    index の変化検知用。
-    一覧に関係する要素だけを連結してハッシュ化する。
+    一覧表示に影響する要素だけで version を作る。
+    ここが前回と同じなら PNG 再生成をスキップする。
     """
     entries = feed.entries[:MAX_HEADLINES]
     parts = []
 
     for entry in entries:
-        title = getattr(entry, "title", "")
+        title = getattr(entry, "title", "").strip()
         dt = get_entry_datetime(entry)
         parts.append(f"{title}|{dt}")
 
     source = "\n".join(parts)
     digest = hashlib.sha1(source.encode("utf-8")).hexdigest()
     return digest
+
+
+def read_existing_version(path: str) -> str:
+    p = Path(path)
+    if not p.exists():
+        return ""
+    return p.read_text(encoding="utf-8").strip()
 
 
 def write_index_version(version_text: str, output_path: str):
@@ -414,6 +421,20 @@ def write_index_version(version_text: str, output_path: str):
 
 def main():
     feed = feedparser.parse(RSS_URL)
+
+    if getattr(feed, "bozo", 0):
+        print(f"bozo_exception: {feed.bozo_exception}")
+
+    new_version = build_index_version(feed)
+    old_version = read_existing_version(OUTPUT_VERSION)
+
+    print(f"old version: {old_version if old_version else '(none)'}")
+    print(f"new version: {new_version}")
+
+    if old_version == new_version:
+        print("No change detected. Skip PNG regeneration.")
+        return
+
     fonts = load_fonts()
 
     render_headlines_page(feed, fonts, OUTPUT_INDEX)
@@ -423,8 +444,8 @@ def main():
         page_label = f"page{i + 1}"
         render_detail_page(feed, fonts, i, output_path, page_label)
 
-    version_text = build_index_version(feed)
-    write_index_version(version_text, OUTPUT_VERSION)
+    write_index_version(new_version, OUTPUT_VERSION)
+    print("PNG regeneration completed.")
 
 
 if __name__ == "__main__":
