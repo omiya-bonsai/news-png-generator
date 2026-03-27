@@ -232,6 +232,16 @@ def content_bottom_limit():
     return HEIGHT - BOTTOM_MARGIN - FOOTER_HEIGHT - FOOTER_TOP_GAP
 
 
+def get_detail_footer_labels(entry_index: int, total_entries: int):
+    is_first = entry_index == 0
+    is_last = entry_index >= total_entries - 1
+
+    left_text = "← index" if is_first else "← 前の記事"
+    right_text = "index →" if is_last else "次の記事 →"
+
+    return left_text, right_text
+
+
 def render_headlines_page(feed, fonts, output_path):
     image, draw = make_canvas()
 
@@ -315,7 +325,11 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
             font=fonts["body"],
             fill=0
         )
-        draw_footer(draw, fonts, "← 前の記事", page_label, "次の記事 →")
+        left_text, right_text = get_detail_footer_labels(
+            entry_index,
+            min(len(feed.entries), MAX_DETAIL_ARTICLES)
+        )
+        draw_footer(draw, fonts, left_text, page_label, right_text)
         image.save(output_path)
         print(f"saved: {output_path}")
         return
@@ -384,7 +398,9 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
         LINE_HEIGHT
     )
 
-    draw_footer(draw, fonts, "← 前の記事", page_label, "次の記事 →")
+    total_entries = min(len(feed.entries), MAX_DETAIL_ARTICLES)
+    left_text, right_text = get_detail_footer_labels(entry_index, total_entries)
+    draw_footer(draw, fonts, left_text, page_label, right_text)
     image.save(output_path)
     print(f"saved: {output_path}")
 
@@ -450,3 +466,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
