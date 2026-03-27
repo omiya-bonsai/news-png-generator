@@ -4,6 +4,8 @@ from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
 import html
 import re
+import hashlib
+from pathlib import Path
 
 RSS_URL = "https://www.nhk.or.jp/rss/news/cat0.xml"
 
@@ -39,6 +41,7 @@ MAX_LINES_PER_HEADLINE = 2
 MAX_LINES_DETAIL_TITLE = 3
 
 OUTPUT_INDEX = "index.png"
+OUTPUT_VERSION = "index.version"
 
 JST = timezone(timedelta(hours=9))
 
@@ -133,8 +136,7 @@ def parse_entry_datetime_to_jst(entry):
         t = entry.updated_parsed
 
     if t is not None:
-        dt = datetime(*t[:6], tzinfo=timezone.utc).astimezone(JST)
-        return dt
+        return datetime(*t[:6], tzinfo=timezone.utc).astimezone(JST)
 
     return None
 
@@ -281,7 +283,6 @@ def render_headlines_page(feed, fonts, output_path):
         )
 
         meta_text = get_entry_datetime(entry)
-
         draw.text(
             (LEFT_MARGIN + 18, y - 2),
             meta_text,
@@ -292,9 +293,8 @@ def render_headlines_page(feed, fonts, output_path):
         y += META_LINE_HEIGHT
         y += ITEM_GAP
 
-        if i < len(entries) - 1:
-            if y < bottom_limit:
-                draw_separator(draw, y - 8)
+        if i < len(entries) - 1 and y < bottom_limit:
+            draw_separator(draw, y - 8)
 
     draw_footer(draw, fonts, "", "index", "詳細 →")
     image.save(output_path)
@@ -306,7 +306,6 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
 
     feed_title = getattr(feed.feed, "title", "NHKニュース")
     y = draw_header(draw, fonts, feed_title, page_label)
-
     bottom_limit = content_bottom_limit()
 
     if len(feed.entries) <= entry_index:
@@ -316,15 +315,7 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
             font=fonts["body"],
             fill=0
         )
-
-        draw_footer(
-            draw,
-            fonts,
-            "← 前の記事",
-            page_label,
-            "次の記事 →"
-        )
-
+        draw_footer(draw, fonts, "← 前の記事", page_label, "次の記事 →")
         image.save(output_path)
         print(f"saved: {output_path}")
         return
@@ -384,7 +375,7 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
     max_summary_lines = max(1, available_height // LINE_HEIGHT)
     summary_lines = limit_lines(summary_lines, max_summary_lines)
 
-    y = draw_lines(
+    draw_lines(
         draw,
         summary_lines,
         fonts["body"],
@@ -393,16 +384,32 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
         LINE_HEIGHT
     )
 
-    draw_footer(
-        draw,
-        fonts,
-        "← 前の記事",
-        page_label,
-        "次の記事 →"
-    )
-
+    draw_footer(draw, fonts, "← 前の記事", page_label, "次の記事 →")
     image.save(output_path)
     print(f"saved: {output_path}")
+
+
+def build_index_version(feed) -> str:
+    """
+    index の変化検知用。
+    一覧に関係する要素だけを連結してハッシュ化する。
+    """
+    entries = feed.entries[:MAX_HEADLINES]
+    parts = []
+
+    for entry in entries:
+        title = getattr(entry, "title", "")
+        dt = get_entry_datetime(entry)
+        parts.append(f"{title}|{dt}")
+
+    source = "\n".join(parts)
+    digest = hashlib.sha1(source.encode("utf-8")).hexdigest()
+    return digest
+
+
+def write_index_version(version_text: str, output_path: str):
+    Path(output_path).write_text(version_text + "\n", encoding="utf-8")
+    print(f"saved: {output_path} -> {version_text}")
 
 
 def main():
@@ -415,6 +422,9 @@ def main():
         output_path = f"page{i + 1}.png"
         page_label = f"page{i + 1}"
         render_detail_page(feed, fonts, i, output_path, page_label)
+
+    version_text = build_index_version(feed)
+    write_index_version(version_text, OUTPUT_VERSION)
 
 
 if __name__ == "__main__":
