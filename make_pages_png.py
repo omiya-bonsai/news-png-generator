@@ -426,16 +426,17 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
 
 def build_index_version(feed) -> str:
     """
-    一覧表示に影響する要素だけで version を作る。
-    ここが前回と同じなら PNG 再生成をスキップする。
+    一覧と詳細の両方に影響する要素から version を作る。
+    見出し・日時・要約のどれかが変われば version が変わる。
     """
-    entries = feed.entries[:MAX_HEADLINES]
+    entries = feed.entries[:MAX_DETAIL_ARTICLES]
     parts = []
 
     for entry in entries:
         title = getattr(entry, "title", "").strip()
         dt = get_entry_datetime(entry)
-        parts.append(f"{title}|{dt}")
+        summary = get_entry_summary(entry)
+        parts.append(f"{title}|{dt}|{summary}")
 
     source = "\n".join(parts)
     digest = hashlib.sha1(source.encode("utf-8")).hexdigest()
