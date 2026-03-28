@@ -2,6 +2,13 @@
 
 このリポジトリは Raspberry Pi 側の生成・配信ロジックです。全体像は統合ハブ [m5papers3-news-system](https://github.com/omiya-bonsai/m5papers3-news-system)、M5PaperS3 側は [M5PaperS3_NewsDashboard](https://github.com/omiya-bonsai/M5PaperS3_NewsDashboard) を参照してください。
 
+## ジャンプリンク
+
+- 統合ハブ:
+  - [omiya-bonsai/m5papers3-news-system](https://github.com/omiya-bonsai/m5papers3-news-system)
+- M5PaperS3 側:
+  - [omiya-bonsai/M5PaperS3_NewsDashboard](https://github.com/omiya-bonsai/M5PaperS3_NewsDashboard)
+
 ## 概要
 
 本ドキュメントは **M5PaperS3 ニュース表示システムのサーバ側構成（最新版）** をまとめたものです。
