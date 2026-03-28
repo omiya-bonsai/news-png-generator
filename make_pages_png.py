@@ -141,6 +141,22 @@ def parse_entry_datetime_to_jst(entry):
     return None
 
 
+def sort_entries_by_datetime(entries):
+    decorated = []
+
+    for original_index, entry in enumerate(entries):
+        dt = parse_entry_datetime_to_jst(entry)
+        if dt is None:
+            # 日時不明記事は末尾へ
+            decorated.append((1, 0.0, original_index, entry))
+        else:
+            # 新しい記事が先頭に来るよう timestamp の降順で並べる
+            decorated.append((0, -dt.timestamp(), original_index, entry))
+
+    decorated.sort(key=lambda item: (item[0], item[1], item[2]))
+    return [item[3] for item in decorated]
+
+
 def get_entry_datetime(entry):
     dt = parse_entry_datetime_to_jst(entry)
     if dt is None:
@@ -260,22 +276,17 @@ def get_detail_footer_labels(page_num: int, total_pages: int):
     return left_text, right_text
 
 
-def render_headlines_page(feed, fonts, output_path):
+def render_headlines_page(feed_title, entries, fonts, output_path):
     image, draw = make_canvas()
 
-    y = draw_header(
-        draw,
-        fonts,
-        getattr(feed.feed, "title", "NHKニュース"),
-        "index"
-    )
+    y = draw_header(draw, fonts, feed_title, "index")
 
     max_width = WIDTH - LEFT_MARGIN - RIGHT_MARGIN
     bottom_limit = content_bottom_limit()
 
-    entries = feed.entries[:MAX_HEADLINES]
+    display_entries = entries[:MAX_HEADLINES]
 
-    if not entries:
+    if not display_entries:
         draw.text(
             (LEFT_MARGIN, y),
             "記事がありません。",
@@ -288,7 +299,7 @@ def render_headlines_page(feed, fonts, output_path):
         print(f"saved: {output_path}")
         return
 
-    for i, entry in enumerate(entries):
+    for i, entry in enumerate(display_entries):
         title_text = "・" + entry.title
         title_lines = wrap_text(draw, title_text, fonts["body"], max_width)
         title_lines = limit_lines(title_lines, MAX_LINES_PER_HEADLINE)
@@ -322,26 +333,25 @@ def render_headlines_page(feed, fonts, output_path):
         y += META_LINE_HEIGHT
         y += ITEM_GAP
 
-        if i < len(entries) - 1 and y < bottom_limit:
+        if i < len(display_entries) - 1 and y < bottom_limit:
             draw_separator(draw, y - 8)
 
-    left_text, center_text, right_text = get_index_footer_labels(len(feed.entries))
+    left_text, center_text, right_text = get_index_footer_labels(len(entries))
     draw_footer(draw, fonts, left_text, center_text, right_text)
     image.save(output_path)
     print(f"saved: {output_path}")
 
 
-def render_detail_page(feed, fonts, entry_index, output_path, page_label):
+def render_detail_page(feed_title, entries, fonts, entry_index, output_path, page_label):
     image, draw = make_canvas()
 
-    feed_title = getattr(feed.feed, "title", "NHKニュース")
     y = draw_header(draw, fonts, feed_title, page_label)
     bottom_limit = content_bottom_limit()
 
-    total_pages = min(len(feed.entries), MAX_DETAIL_ARTICLES)
+    total_pages = min(len(entries), MAX_DETAIL_ARTICLES)
     page_num = entry_index + 1
 
-    if len(feed.entries) <= entry_index:
+    if len(entries) <= entry_index:
         draw.text(
             (LEFT_MARGIN, y),
             "対象記事がありません。",
@@ -354,7 +364,7 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
         print(f"saved: {output_path}")
         return
 
-    entry = feed.entries[entry_index]
+    entry = entries[entry_index]
     max_width = WIDTH - LEFT_MARGIN - RIGHT_MARGIN
 
     rank_label = f"記事 {page_num}"
@@ -424,19 +434,19 @@ def render_detail_page(feed, fonts, entry_index, output_path, page_label):
     print(f"saved: {output_path}")
 
 
-def build_index_version(feed) -> str:
+def build_index_version(entries) -> str:
     """
     一覧と詳細の両方に影響する要素から version を作る。
-    見出し・日時・要約のどれかが変われば version が変わる。
+    並び順・タイトル・日時・要約のどれかが変われば version が変わる。
     """
-    entries = feed.entries[:MAX_DETAIL_ARTICLES]
+    version_entries = entries[:MAX_DETAIL_ARTICLES]
     parts = []
 
-    for entry in entries:
+    for position, entry in enumerate(version_entries, start=1):
         title = getattr(entry, "title", "").strip()
         dt = get_entry_datetime(entry)
         summary = get_entry_summary(entry)
-        parts.append(f"{title}|{dt}|{summary}")
+        parts.append(f"{position}|{title}|{dt}|{summary}")
 
     source = "\n".join(parts)
     digest = hashlib.sha1(source.encode("utf-8")).hexdigest()
@@ -461,7 +471,10 @@ def main():
     if getattr(feed, "bozo", 0):
         print(f"bozo_exception: {feed.bozo_exception}")
 
-    new_version = build_index_version(feed)
+    feed_title = getattr(feed.feed, "title", "NHKニュース")
+    sorted_entries = sort_entries_by_datetime(feed.entries)
+
+    new_version = build_index_version(sorted_entries)
     old_version = read_existing_version(OUTPUT_VERSION)
 
     print(f"old version: {old_version if old_version else '(none)'}")
@@ -473,12 +486,12 @@ def main():
 
     fonts = load_fonts()
 
-    render_headlines_page(feed, fonts, OUTPUT_INDEX)
+    render_headlines_page(feed_title, sorted_entries, fonts, OUTPUT_INDEX)
 
     for i in range(MAX_DETAIL_ARTICLES):
         output_path = f"page{i + 1}.png"
         page_label = f"page{i + 1}"
-        render_detail_page(feed, fonts, i, output_path, page_label)
+        render_detail_page(feed_title, sorted_entries, fonts, i, output_path, page_label)
 
     write_index_version(new_version, OUTPUT_VERSION)
     print("PNG regeneration completed.")
