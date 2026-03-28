@@ -1,0 +1,78 @@
+# systemd の user service 定義ファイル
+# 配置場所:
+#   ~/.config/systemd/user/m5news-http.service
+#
+# このファイルは、
+# 「ログイン中の自分用の systemd」が
+# M5PaperS3 用の HTTP サーバをどう起動・維持するか
+# を定義しています。
+
+[Unit]
+# この service の説明文。
+# systemctl status した時に表示されます。
+Description=M5PaperS3 PNG HTTP server
+
+# network.target の後に起動したい、という意味です。
+# 「ネットワーク関連の初期化がある程度済んでから起動してほしい」
+# という順序指定です。
+#
+# 注意:
+# これは「ネットワークが完全に使えるまで待つ」保証ではなく、
+# あくまで起動順のヒントです。
+After=network.target
+
+[Service]
+# 実際に起動するコマンドです。
+#
+# /usr/bin/python3
+#   Python 本体
+#
+# -m http.server 8010
+#   Python 標準の簡易 HTTP サーバを使って
+#   8010 番ポートで待ち受けます。
+#
+# この service が動いていれば、
+# たとえば次の URL で index.png を配信できます。
+#   http://<RaspberryPiのIP>:8010/index.png
+ExecStart=/usr/bin/python3 -m http.server 8010
+
+# このディレクトリをカレントディレクトリとして起動します。
+#
+# つまり http.server は
+# /home/bonsai/m5papers3 の中身をそのまま配信します。
+#
+# この指定が重要です。
+# これが無いと、別のディレクトリを配信してしまい、
+# index.png や page1.png が見えないことがあります。
+WorkingDirectory=/home/bonsai/m5papers3
+
+# プロセスが終了したら、常に再起動する設定です。
+#
+# たとえば:
+# - 何らかのエラーで python が落ちた
+# - 手元の事情で一度止まった
+#
+# といった時でも、systemd が再度立ち上げます。
+Restart=always
+
+# 再起動までの待ち時間です。
+# ここでは 5 秒待ってから再起動します。
+#
+# すぐ再起動しすぎると、
+# 連続失敗時に systemd が忙しくなりすぎるので、
+# 少し待たせるのが一般的です。
+RestartSec=5
+
+[Install]
+# この service を enable した時、
+# default.target が起動するタイミングで一緒に起動対象にする、
+# という意味です。
+#
+# 今回ここが無かったため、
+# service は「手動 start すれば動くが、自動起動しない」状態でした。
+#
+# これを追加したことで、
+# systemctl --user enable m5news-http.service
+# が意味を持つようになりました。
+WantedBy=default.target
+

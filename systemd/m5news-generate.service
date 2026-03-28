@@ -1,0 +1,7 @@
+[Unit]
+Description=Generate M5PaperS3 news PNG pages
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/bonsai/m5papers3
+ExecStart=/home/bonsai/myenv/bin/python make_pages_png.py
