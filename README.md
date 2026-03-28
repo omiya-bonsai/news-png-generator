@@ -1,6 +1,6 @@
 # Raspberry Pi 側セットアップ手順（M5PaperS3 News Server v2）
 
-このリポジトリは Raspberry Pi 側の生成・配信ロジックです。全体像は統合ハブ `m5papers3-news-system`、M5PaperS3 側は `M5PaperS3_NewsDashboard` を参照してください。
+このリポジトリは Raspberry Pi 側の生成・配信ロジックです。全体像は統合ハブ [m5papers3-news-system](https://github.com/omiya-bonsai/m5papers3-news-system)、M5PaperS3 側は [M5PaperS3_NewsDashboard](https://github.com/omiya-bonsai/M5PaperS3_NewsDashboard) を参照してください。
 
 ## 概要
 
@@ -43,9 +43,9 @@ M5PaperS3
 ## 関連リポジトリ
 
 - 統合ハブ:
-  - `m5papers3-news-system`
+  - [omiya-bonsai/m5papers3-news-system](https://github.com/omiya-bonsai/m5papers3-news-system)
 - M5PaperS3 側:
-  - `M5PaperS3_NewsDashboard`
+  - [omiya-bonsai/M5PaperS3_NewsDashboard](https://github.com/omiya-bonsai/M5PaperS3_NewsDashboard)
 
 このリポジトリは、Raspberry Pi 側の次を担当します。
 
