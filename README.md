@@ -1,5 +1,7 @@
 # Raspberry Pi 側セットアップ手順（M5PaperS3 News Server v2）
 
+このリポジトリは Raspberry Pi 側の生成・配信ロジックです。全体像は統合ハブ `m5papers3-news-system`、M5PaperS3 側は `M5PaperS3_NewsDashboard` を参照してください。
+
 ## 概要
 
 本ドキュメントは **M5PaperS3 ニュース表示システムのサーバ側構成（最新版）** をまとめたものです。
@@ -35,6 +37,23 @@ python http.server (port 8010)
    ↓
 M5PaperS3
 ```
+
+---
+
+## 関連リポジトリ
+
+- 統合ハブ:
+  - `m5papers3-news-system`
+- M5PaperS3 側:
+  - `M5PaperS3_NewsDashboard`
+
+このリポジトリは、Raspberry Pi 側の次を担当します。
+
+- RSS 取得
+- PNG 生成
+- `index.version` 生成
+- HTTP 配信
+- `systemd` 運用
 
 ---
 
@@ -387,4 +406,3 @@ cat index.version
 
 - HTTPS 化
 - CDN 配信
-
