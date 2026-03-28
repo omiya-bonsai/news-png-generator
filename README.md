@@ -9,10 +9,6 @@
 - M5PaperS3 側:
   - [omiya-bonsai/M5PaperS3_NewsDashboard](https://github.com/omiya-bonsai/M5PaperS3_NewsDashboard)
 
-## License
-
-このリポジトリは [MIT License](LICENSE) です。
-
 ![M5PaperS3 device photo](img/01.jpeg)
 
 ## 概要
@@ -426,3 +422,7 @@ cat index.version
 
 - HTTPS 化
 - CDN 配信
+
+## License
+
+このリポジトリは [MIT License](LICENSE) です。
