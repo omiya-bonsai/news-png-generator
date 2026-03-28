@@ -9,6 +9,10 @@
 - M5PaperS3 側:
   - [omiya-bonsai/M5PaperS3_NewsDashboard](https://github.com/omiya-bonsai/M5PaperS3_NewsDashboard)
 
+## License
+
+このリポジトリは [MIT License](LICENSE) です。
+
 ## 概要
 
 本ドキュメントは **M5PaperS3 ニュース表示システムのサーバ側構成（最新版）** をまとめたものです。
