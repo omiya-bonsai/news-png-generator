@@ -2,292 +2,389 @@
 
 ## 概要
 
-本ドキュメントは **M5PaperS3
-ニュース表示システムのサーバ側構成（最新版）** をまとめたものです。
+本ドキュメントは **M5PaperS3 ニュース表示システムのサーバ側構成（最新版）** をまとめたものです。
 
 従来構成から次の改善が追加されています。
 
--   index.png + page1〜page6.png の6記事構成
--   index.version 差分検出方式
--   SDキャッシュ連携前提設計
--   systemd timer 自動更新
--   HTTP常駐サービス
--   再起動後の完全自動復旧
+- index.png + page1〜page6.png の6記事構成
+- index.version 差分検出方式
+- SDキャッシュ連携前提設計
+- systemd timer 自動更新
+- HTTP常駐サービス
+- 再起動後の完全自動復旧
 
-------------------------------------------------------------------------
+---
 
-# システム構成（最新版）
+## システム構成（最新版）
 
-    NHK RSS
-       ↓
-    make_pages_png.py
-       ↓
-    index.png
-    page1.png
-    page2.png
-    page3.png
-    page4.png
-    page5.png
-    page6.png
-    index.version
-       ↓
-    python http.server (port 8010)
-       ↓
-    M5PaperS3
+```text
+NHK RSS
+   ↓
+make_pages_png.py
+   ↓
+index.png
+page1.png
+page2.png
+page3.png
+page4.png
+page5.png
+page6.png
+index.version
+   ↓
+python http.server (port 8010)
+   ↓
+M5PaperS3
+```
 
-------------------------------------------------------------------------
+---
 
-# ディレクトリ構成
+## ディレクトリ構成
 
 例:
 
-    ~/m5papers3
-     ├── make_pages_png.py
-     ├── index.png
-     ├── page1.png
-     ├── page2.png
-     ├── page3.png
-     ├── page4.png
-     ├── page5.png
-     ├── page6.png
-     ├── index.version
-     └── fonts/
-          ├── NotoSansCJK-Regular.ttc
-          └── NotoSansCJK-Bold.ttc
+```text
+~/m5papers3
+├── make_pages_png.py
+├── index.png
+├── page1.png
+├── page2.png
+├── page3.png
+├── page4.png
+├── page5.png
+├── page6.png
+├── index.version
+└── fonts/
+    ├── NotoSansCJK-Regular.ttc
+    └── NotoSansCJK-Bold.ttc
+```
 
-------------------------------------------------------------------------
+---
 
-# Python 仮想環境の準備
+## フォント要件（重要）
+
+このリポジトリには `fonts/` 配下のフォントファイルを含めていません。  
+ファイルサイズが大きいため、各環境で別途配置する前提です。
+
+現在の `make_pages_png.py` は、少なくとも次のフォントを前提にしています。
+
+- NotoSansCJK-Regular.ttc
+- NotoSansCJK-Bold.ttc
+
+配置先:
+
+```text
+/home/bonsai/m5papers3/fonts/
+```
+
+つまり、実際には次のパスに置かれている必要があります。
+
+```text
+/home/bonsai/m5papers3/fonts/NotoSansCJK-Regular.ttc
+/home/bonsai/m5papers3/fonts/NotoSansCJK-Bold.ttc
+```
+
+フォント配置先を変更する場合は、`make_pages_png.py` 内の次の定数も合わせて修正してください。
+
+- `FONT_REGULAR`
+- `FONT_BOLD`
+
+フォントが存在しない場合、`ImageFont.truetype(...)` の初期化でスクリプトは失敗します。
+
+補足:
+
+- このフォント要件は Raspberry Pi 側の PNG 生成に必要です
+- M5PaperS3 本体側スケッチには不要です
+
+---
+
+## Python 仮想環境の準備
 
 作成:
 
-    python3 -m venv ~/myenv
+```bash
+python3 -m venv ~/myenv
+```
 
 有効化:
 
-    source ~/myenv/bin/activate
+```bash
+source ~/myenv/bin/activate
+```
 
 必要ライブラリ:
 
-    pip install pillow feedparser
+```bash
+pip install pillow feedparser
+```
 
-------------------------------------------------------------------------
+---
 
-# PNG 生成スクリプト動作確認
+## PNG 生成スクリプト動作確認
 
 実行:
 
-    cd ~/m5papers3
-    python make_pages_png.py
+```bash
+cd ~/m5papers3
+python make_pages_png.py
+```
 
 生成確認:
 
-    index.png
-    page1.png
-    page2.png
-    page3.png
-    page4.png
-    page5.png
-    page6.png
-    index.version
+- index.png
+- page1.png
+- page2.png
+- page3.png
+- page4.png
+- page5.png
+- page6.png
+- index.version
 
-------------------------------------------------------------------------
+---
 
-# index.version 差分検出方式（重要）
+## index.version 差分検出方式（重要）
 
-PNG より先に **index.version** を取得します。
+PNG より先に `index.version` を取得します。
 
 例:
 
-    20260326-1910
+```text
+20260326-1910
+```
 
-M5PaperS3 側では
+M5PaperS3 側では次のように判定します。
 
-    前回値と一致 → index.png 再取得しない
+```text
+前回値と一致 → index.png 再取得しない
+```
 
-つまり:
+つまり、次を同時に実現します。
 
--   通信削減
--   ePaper書換削減
--   バッテリー消費削減
+- 通信削減
+- ePaper書換削減
+- バッテリー消費削減
 
-を同時に実現します。
+現在の `index.version` は、一覧だけでなく詳細ページの変更も反映できるよう、記事タイトル・日時・要約をもとに生成する前提です。
 
-------------------------------------------------------------------------
+---
 
-# HTTP 配信確認
+## HTTP 配信確認
 
 テスト起動:
 
-    cd ~/m5papers3
-    python3 -m http.server 8010
+```bash
+cd ~/m5papers3
+python3 -m http.server 8010
+```
 
 確認:
 
-    http://<RaspberryPiのIP>:8010/index.png
+```text
+http://<RaspberryPiのIP>:8010/index.png
+```
 
-------------------------------------------------------------------------
+---
 
-# systemd による PNG 自動生成
+## systemd による PNG 自動生成
 
 service 作成:
 
-    mkdir -p ~/.config/systemd/user
-    nano ~/.config/systemd/user/m5news-generate.service
+```bash
+mkdir -p ~/.config/systemd/user
+nano ~/.config/systemd/user/m5news-generate.service
+```
 
 内容:
 
-    [Unit]
-    Description=Generate M5PaperS3 news PNG pages
+```ini
+[Unit]
+Description=Generate M5PaperS3 news PNG pages
 
-    [Service]
-    Type=oneshot
-    WorkingDirectory=/home/bonsai/m5papers3
-    ExecStart=/home/bonsai/myenv/bin/python make_pages_png.py
+[Service]
+Type=oneshot
+WorkingDirectory=/home/bonsai/m5papers3
+ExecStart=/home/bonsai/myenv/bin/python make_pages_png.py
+```
 
-------------------------------------------------------------------------
+---
 
-# timer 作成（5分周期）
+## timer 作成（5分周期）
 
-    nano ~/.config/systemd/user/m5news-generate.timer
+```bash
+nano ~/.config/systemd/user/m5news-generate.timer
+```
 
 内容:
 
-    [Unit]
-    Description=Run news PNG generator every 5 minutes
+```ini
+[Unit]
+Description=Run news PNG generator every 5 minutes
 
-    [Timer]
-    OnBootSec=30
-    OnUnitActiveSec=5min
-    Persistent=true
+[Timer]
+OnBootSec=30
+OnUnitActiveSec=5min
+Persistent=true
 
-    [Install]
-    WantedBy=timers.target
+[Install]
+WantedBy=timers.target
+```
 
 有効化:
 
-    systemctl --user daemon-reload
-    systemctl --user enable m5news-generate.timer
-    systemctl --user start m5news-generate.timer
+```bash
+systemctl --user daemon-reload
+systemctl --user enable m5news-generate.timer
+systemctl --user start m5news-generate.timer
+```
 
 確認:
 
-    systemctl --user list-timers
+```bash
+systemctl --user list-timers
+```
 
-------------------------------------------------------------------------
+---
 
-# HTTP サーバ常駐化
+## HTTP サーバ常駐化
 
 service 作成:
 
-    nano ~/.config/systemd/user/m5news-http.service
+```bash
+nano ~/.config/systemd/user/m5news-http.service
+```
 
 内容:
 
-    [Unit]
-    Description=M5PaperS3 PNG HTTP server
+```ini
+[Unit]
+Description=M5PaperS3 PNG HTTP server
 
-    [Service]
-    ExecStart=/usr/bin/python3 -m http.server 8010
-    WorkingDirectory=/home/bonsai/m5papers3
-    Restart=always
-    RestartSec=5
+[Service]
+ExecStart=/usr/bin/python3 -m http.server 8010
+WorkingDirectory=/home/bonsai/m5papers3
+Restart=always
+RestartSec=5
+```
 
 有効化:
 
-    systemctl --user daemon-reload
-    systemctl --user enable m5news-http.service
-    systemctl --user start m5news-http.service
+```bash
+systemctl --user daemon-reload
+systemctl --user enable m5news-http.service
+systemctl --user start m5news-http.service
+```
 
 確認:
 
-    systemctl --user status m5news-http.service
+```bash
+systemctl --user status m5news-http.service
+```
 
-------------------------------------------------------------------------
+---
 
-# 再起動後も自動起動させる
+## 再起動後も自動起動させる
 
 linger 有効化:
 
-    loginctl enable-linger bonsai
+```bash
+loginctl enable-linger bonsai
+```
 
 ログイン不要で常駐します。
 
-------------------------------------------------------------------------
+---
 
-# ログ確認方法
+## ログ確認方法
 
 PNG生成ログ:
 
-    journalctl --user -u m5news-generate.service
+```bash
+journalctl --user -u m5news-generate.service
+```
 
 HTTPログ:
 
-    journalctl --user -u m5news-http.service
+```bash
+journalctl --user -u m5news-http.service
+```
 
-------------------------------------------------------------------------
+---
 
-# 動作確認チェックリスト
+## 動作確認チェックリスト
 
 確認:
 
--   再起動後 HTTP server 起動
--   5分周期 PNG 更新
--   index.version 更新確認
--   index.png 表示確認
--   page1〜page6.png 表示確認
--   M5PaperS3 自動追従確認
+- 再起動後 HTTP server 起動
+- 5分周期 PNG 更新
+- index.version 更新確認
+- index.png 表示確認
+- page1〜page6.png 表示確認
+- M5PaperS3 自動追従確認
 
-------------------------------------------------------------------------
+---
 
-# 推奨更新周期
+## 推奨更新周期
 
-    5分
+```text
+5分
+```
 
 理由:
 
--   RSS 更新頻度と整合
--   通信量削減
--   ePaper寿命延長
--   バッテリー節約
+- RSS 更新頻度と整合
+- 通信量削減
+- ePaper寿命延長
+- バッテリー節約
 
-------------------------------------------------------------------------
+---
 
-# トラブルシューティング
+## トラブルシューティング
 
 PNG 未更新:
 
-    systemctl --user status m5news-generate.timer
+```bash
+systemctl --user status m5news-generate.timer
+```
 
 HTTP 接続不可:
 
-    systemctl --user status m5news-http.service
+```bash
+systemctl --user status m5news-http.service
+```
 
 ポート確認:
 
-    ss -tulpn | grep 8010
+```bash
+ss -tulpn | grep 8010
+```
 
 index.version 未更新:
 
-    cat index.version
+```bash
+cat index.version
+```
 
-------------------------------------------------------------------------
+フォント読み込み失敗:
 
-# 今後の拡張候補（優先順）
+- `fonts/` 配下に必要な `.ttc` があるか確認
+- `make_pages_png.py` の `FONT_REGULAR` / `FONT_BOLD` のパスが実環境と一致しているか確認
+
+---
+
+## 今後の拡張候補（優先順）
 
 優先度 高:
 
--   MQTT 差分通知連携
--   nginx 置換
--   gzip 転送
+- MQTT 差分通知連携
+- nginx 置換
+- gzip 転送
 
 優先度 中:
 
--   複数 RSS 統合
--   category 分離表示
+- 複数 RSS 統合
+- category 分離表示
 
 優先度 低:
 
--   HTTPS 化
--   CDN 配信
+- HTTPS 化
+- CDN 配信
 
