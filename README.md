@@ -13,6 +13,8 @@
 
 このリポジトリは [MIT License](LICENSE) です。
 
+![M5PaperS3 device photo](img/01.jpeg)
+
 ## 概要
 
 本ドキュメントは **M5PaperS3 ニュース表示システムのサーバ側構成（最新版）** をまとめたものです。
