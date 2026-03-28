@@ -283,13 +283,20 @@ nano ~/.config/systemd/user/m5news-http.service
 ```ini
 [Unit]
 Description=M5PaperS3 PNG HTTP server
+After=network.target
 
 [Service]
 ExecStart=/usr/bin/python3 -m http.server 8010
 WorkingDirectory=/home/bonsai/m5papers3
 Restart=always
 RestartSec=5
+
+[Install]
+WantedBy=default.target
 ```
+
+`[Install]` が無いと、手動で `start` すれば動いても、`enable` した時の自動起動対象になりません。  
+再起動後も確実に HTTP サーバを立ち上げたい場合は、この `WantedBy=default.target` が重要です。
 
 有効化:
 
