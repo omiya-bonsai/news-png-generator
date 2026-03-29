@@ -1,32 +1,37 @@
-# Raspberry Pi 側セットアップ手順（M5PaperS3 News Server v2）
+# M5PaperS3 News Server for Raspberry Pi
 
-このリポジトリは Raspberry Pi 側の生成・配信ロジックです。全体像は統合ハブ [m5papers3-news-system](https://github.com/omiya-bonsai/m5papers3-news-system)、M5PaperS3 側は [M5PaperS3_NewsDashboard](https://github.com/omiya-bonsai/M5PaperS3_NewsDashboard) を参照してください。
+Japanese: [README.ja.md](README.ja.md)
 
-## ジャンプリンク
+This repository contains the Raspberry Pi side of the system: RSS fetching, PNG generation, `index.version` generation, HTTP serving, and `systemd`-based operation.
 
-- 統合ハブ:
+For the full project overview, see the integration hub [m5papers3-news-system](https://github.com/omiya-bonsai/m5papers3-news-system). For the device-side implementation, see [M5PaperS3_NewsDashboard](https://github.com/omiya-bonsai/M5PaperS3_NewsDashboard).
+
+## Quick Links
+
+- Integration hub:
   - [omiya-bonsai/m5papers3-news-system](https://github.com/omiya-bonsai/m5papers3-news-system)
-- M5PaperS3 側:
+- M5PaperS3 device:
   - [omiya-bonsai/M5PaperS3_NewsDashboard](https://github.com/omiya-bonsai/M5PaperS3_NewsDashboard)
 
 ![M5PaperS3 device photo](img/01.jpeg)
 
-## 概要
+## What This Repository Does
 
-本ドキュメントは **M5PaperS3 ニュース表示システムのサーバ側構成（最新版）** をまとめたものです。
+- build `index.png` and `page1.png` to `page6.png`
+- generate `index.version`
+- serve files over HTTP
+- keep generation and serving alive with `systemd --user`
 
-従来構成から次の改善が追加されています。
+## Current Features
 
-- index.png + page1〜page6.png の6記事構成
-- index.version 差分検出方式
-- SDキャッシュ連携前提設計
-- systemd timer 自動更新
-- HTTP常駐サービス
-- 再起動後の完全自動復旧
+- six-page news layout (`index` + six detail pages)
+- `index.version` diff-based update detection
+- SD-cache-friendly output design
+- automated generation with `systemd` timer
+- persistent HTTP service
+- reboot-friendly recovery
 
----
-
-## システム構成（最新版）
+## System Flow
 
 ```text
 NHK RSS
@@ -47,28 +52,9 @@ python http.server (port 8010)
 M5PaperS3
 ```
 
----
+## Directory Layout
 
-## 関連リポジトリ
-
-- 統合ハブ:
-  - [omiya-bonsai/m5papers3-news-system](https://github.com/omiya-bonsai/m5papers3-news-system)
-- M5PaperS3 側:
-  - [omiya-bonsai/M5PaperS3_NewsDashboard](https://github.com/omiya-bonsai/M5PaperS3_NewsDashboard)
-
-このリポジトリは、Raspberry Pi 側の次を担当します。
-
-- RSS 取得
-- PNG 生成
-- `index.version` 生成
-- HTTP 配信
-- `systemd` 運用
-
----
-
-## ディレクトリ構成
-
-例:
+Example runtime layout:
 
 ```text
 ~/m5papers3
@@ -86,142 +72,99 @@ M5PaperS3
     └── NotoSansCJK-Bold.ttc
 ```
 
----
+## Font Requirement
 
-## フォント要件（重要）
+Font files are intentionally not included in this repository.
 
-このリポジトリには `fonts/` 配下のフォントファイルを含めていません。  
-ファイルサイズが大きいため、各環境で別途配置する前提です。
+The current script expects at least:
 
-現在の `make_pages_png.py` は、少なくとも次のフォントを前提にしています。
+- `NotoSansCJK-Regular.ttc`
+- `NotoSansCJK-Bold.ttc`
 
-- NotoSansCJK-Regular.ttc
-- NotoSansCJK-Bold.ttc
-
-配置先:
+Expected path:
 
 ```text
 /home/bonsai/m5papers3/fonts/
 ```
 
-つまり、実際には次のパスに置かれている必要があります。
+If you change the font location, also update `FONT_REGULAR` and `FONT_BOLD` inside `make_pages_png.py`.
 
-```text
-/home/bonsai/m5papers3/fonts/NotoSansCJK-Regular.ttc
-/home/bonsai/m5papers3/fonts/NotoSansCJK-Bold.ttc
-```
+## Python Environment
 
-フォント配置先を変更する場合は、`make_pages_png.py` 内の次の定数も合わせて修正してください。
-
-- `FONT_REGULAR`
-- `FONT_BOLD`
-
-フォントが存在しない場合、`ImageFont.truetype(...)` の初期化でスクリプトは失敗します。
-
-補足:
-
-- このフォント要件は Raspberry Pi 側の PNG 生成に必要です
-- M5PaperS3 本体側スケッチには不要です
-
----
-
-## Python 仮想環境の準備
-
-作成:
+Create a virtual environment:
 
 ```bash
 python3 -m venv ~/myenv
 ```
 
-有効化:
+Activate it:
 
 ```bash
 source ~/myenv/bin/activate
 ```
 
-必要ライブラリ:
+Install dependencies:
 
 ```bash
 pip install pillow feedparser
 ```
 
----
-
-## PNG 生成スクリプト動作確認
-
-実行:
+## Test the PNG Generator
 
 ```bash
 cd ~/m5papers3
 python make_pages_png.py
 ```
 
-生成確認:
+Expected generated files:
 
-- index.png
-- page1.png
-- page2.png
-- page3.png
-- page4.png
-- page5.png
-- page6.png
-- index.version
+- `index.png`
+- `page1.png`
+- `page2.png`
+- `page3.png`
+- `page4.png`
+- `page5.png`
+- `page6.png`
+- `index.version`
 
----
+## How `index.version` Is Used
 
-## index.version 差分検出方式（重要）
-
-PNG より先に `index.version` を取得します。
-
-例:
+The device checks `index.version` before re-downloading `index.png`.
 
 ```text
-20260326-1910
+same as previous value -> skip index.png download
 ```
 
-M5PaperS3 側では次のように判定します。
+This reduces:
 
-```text
-前回値と一致 → index.png 再取得しない
-```
+- network usage
+- e-paper redraw frequency
+- battery drain
 
-つまり、次を同時に実現します。
+The current version string is built from article order, title, timestamp, and summary so that detail-page changes are also reflected.
 
-- 通信削減
-- ePaper書換削減
-- バッテリー消費削減
+## HTTP Serving Check
 
-現在の `index.version` は、一覧だけでなく詳細ページの変更も反映できるよう、記事タイトル・日時・要約をもとに生成する前提です。
-
----
-
-## HTTP 配信確認
-
-テスト起動:
+Manual test:
 
 ```bash
 cd ~/m5papers3
 python3 -m http.server 8010
 ```
 
-確認:
+Then check:
 
 ```text
-http://<RaspberryPiのIP>:8010/index.png
+http://<RaspberryPi-IP>:8010/index.png
 ```
 
----
+## `systemd` Setup
 
-## systemd による PNG 自動生成
+The repository includes distributable unit files under [`systemd/`](systemd).
 
-service 作成:
+### Generate PNG pages
 
-```bash
-mkdir -p ~/.config/systemd/user
-nano ~/.config/systemd/user/m5news-generate.service
-```
-
-内容:
+Example service:
 
 ```ini
 [Unit]
@@ -233,15 +176,9 @@ WorkingDirectory=/home/bonsai/m5papers3
 ExecStart=/home/bonsai/myenv/bin/python make_pages_png.py
 ```
 
----
+### Run every 5 minutes
 
-## timer 作成（5分周期）
-
-```bash
-nano ~/.config/systemd/user/m5news-generate.timer
-```
-
-内容:
+Example timer:
 
 ```ini
 [Unit]
@@ -256,7 +193,7 @@ Persistent=true
 WantedBy=timers.target
 ```
 
-有効化:
+Enable it:
 
 ```bash
 systemctl --user daemon-reload
@@ -264,23 +201,9 @@ systemctl --user enable m5news-generate.timer
 systemctl --user start m5news-generate.timer
 ```
 
-確認:
+### Persistent HTTP server
 
-```bash
-systemctl --user list-timers
-```
-
----
-
-## HTTP サーバ常駐化
-
-service 作成:
-
-```bash
-nano ~/.config/systemd/user/m5news-http.service
-```
-
-内容:
+Example HTTP service:
 
 ```ini
 [Unit]
@@ -297,10 +220,9 @@ RestartSec=5
 WantedBy=default.target
 ```
 
-`[Install]` が無いと、手動で `start` すれば動いても、`enable` した時の自動起動対象になりません。  
-再起動後も確実に HTTP サーバを立ち上げたい場合は、この `WantedBy=default.target` が重要です。
+The `[Install]` section matters. Without it, the service may work with manual `start`, but it will not be a proper `enable` target for automatic startup after reboot.
 
-有効化:
+Enable it:
 
 ```bash
 systemctl --user daemon-reload
@@ -308,121 +230,68 @@ systemctl --user enable m5news-http.service
 systemctl --user start m5news-http.service
 ```
 
-確認:
+## Auto-start After Reboot
 
-```bash
-systemctl --user status m5news-http.service
-```
-
----
-
-## 再起動後も自動起動させる
-
-linger 有効化:
+If you want user services to stay available without interactive login:
 
 ```bash
 loginctl enable-linger bonsai
 ```
 
-ログイン不要で常駐します。
+## Logs
 
----
-
-## ログ確認方法
-
-PNG生成ログ:
+PNG generation:
 
 ```bash
 journalctl --user -u m5news-generate.service
 ```
 
-HTTPログ:
+HTTP service:
 
 ```bash
 journalctl --user -u m5news-http.service
 ```
 
----
+## Basic Verification Checklist
 
-## 動作確認チェックリスト
+- HTTP server starts after reboot
+- PNG generation runs every 5 minutes
+- `index.version` updates as expected
+- `index.png` is reachable
+- `page1.png` through `page6.png` are reachable
+- the M5PaperS3 device follows updates correctly
 
-確認:
+## Troubleshooting
 
-- 再起動後 HTTP server 起動
-- 5分周期 PNG 更新
-- index.version 更新確認
-- index.png 表示確認
-- page1〜page6.png 表示確認
-- M5PaperS3 自動追従確認
-
----
-
-## 推奨更新周期
-
-```text
-5分
-```
-
-理由:
-
-- RSS 更新頻度と整合
-- 通信量削減
-- ePaper寿命延長
-- バッテリー節約
-
----
-
-## トラブルシューティング
-
-PNG 未更新:
+Generation not running:
 
 ```bash
 systemctl --user status m5news-generate.timer
 ```
 
-HTTP 接続不可:
+HTTP unreachable:
 
 ```bash
 systemctl --user status m5news-http.service
-```
-
-ポート確認:
-
-```bash
 ss -tulpn | grep 8010
 ```
 
-index.version 未更新:
+Version not updating:
 
 ```bash
 cat index.version
 ```
 
-フォント読み込み失敗:
+Font load failure:
 
-- `fonts/` 配下に必要な `.ttc` があるか確認
-- `make_pages_png.py` の `FONT_REGULAR` / `FONT_BOLD` のパスが実環境と一致しているか確認
+- confirm required `.ttc` files exist under `fonts/`
+- confirm the `FONT_REGULAR` and `FONT_BOLD` paths match your environment
 
----
+## Notes
 
-## 今後の拡張候補（優先順）
-
-優先度 高:
-
-- MQTT 差分通知連携
-- nginx 置換
-- gzip 転送
-
-優先度 中:
-
-- 複数 RSS 統合
-- category 分離表示
-
-優先度 低:
-
-- HTTPS 化
-- CDN 配信
+- The detailed documents are currently written in Japanese.
+- Real NHK-generated PNG files and real-news images should stay out of this repository.
 
 ## License
 
-このリポジトリは [MIT License](LICENSE) です。
+This repository is licensed under the [MIT License](LICENSE).
