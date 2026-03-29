@@ -15,6 +15,8 @@ For the full project overview, see the integration hub [m5papers3-news-system](h
 
 ![M5PaperS3 device photo](img/01.jpeg)
 
+![M5PaperS3 News System overview](img/01.en.png)
+
 ## What This Repository Does
 
 - build `index.png` and `page1.png` to `page6.png`
