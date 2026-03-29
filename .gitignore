@@ -1,5 +1,6 @@
 .env
-*.png
+index.png
+page*.png
 fonts/*
 waste/
 index.version
